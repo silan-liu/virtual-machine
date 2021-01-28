@@ -4,19 +4,19 @@
 // 指令定义
 typedef enum
 {
-  PSH,
-  ADD,
-  POP,
-  SET,
-  HLT,
-  MOV,
-  SUB,
-  DIV,
-  MUL,
-  STR,
-  LDR,
-  IF,
-  LOG
+  PSH, // PSH 5;              ::将数据放入栈中
+  ADD, // ADD;                ::取出栈中的两个数据相加后，结果放入栈中
+  POP, // POP;                ::栈顶指针-1
+  SET, // SET reg, 3;         ::将数据放入寄存器
+  HLT, // HLT;                ::停止程序
+  MOV, // MOV reg1, reg2;     ::将寄存器 reg2 中的值放入 reg1
+  SUB, // SUB;                ::取出栈中的两个数据相减后，结果放入栈中
+  DIV, // DIV;                ::取出栈中的两个数据相除后，结果放入栈中
+  MUL, // MUL;                ::取出栈中的两个数据相乘后，结果放入栈中
+  STR, // STR reg;            ::将寄存器的数据放入栈中
+  LDR, // LDR reg;            ::将栈顶数据放入寄存器
+  IF,  // IF reg, value, ip;  ::如果 reg 的值等于 value，则跳转到新 ip 指向的指令。
+  LOG, // LOG value;          ::打印数据
 } InstructionSet;
 
 // 寄存器类型定义
@@ -27,7 +27,7 @@ typedef enum
   C,
   D,
   E,
-  F,  // 通用寄存器
+  F,  // A-F 通用寄存器
   IP, // IP 寄存器
   SP, // 栈顶指针寄存器
   NUM_OF_REGISTERS
