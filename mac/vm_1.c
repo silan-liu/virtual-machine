@@ -4,10 +4,10 @@
 // 指令定义
 typedef enum
 {
-  PSH,
-  ADD,
-  POP,
-  HLT,
+  PSH, // PSH 5;              ::将数据放入栈中
+  ADD, // ADD;                ::取出栈中的两个数据相加后，结果放入栈中
+  POP, // POP;                ::取出栈顶数据，并打印
+  HLT, // HLT;                ::停止程序
 } InstructionSet;
 
 // 程序
