@@ -6,7 +6,7 @@ typedef enum
 {
   PSH,  // PSH 5;              ::将数据放入栈中
   POP,  // POP;                ::栈顶指针-1
-  SET,  // SET reg, 3;         ::将数据放入寄存器
+  SET,  // SET reg, 3;         ::给寄存器赋值
   HLT,  // HLT;                ::停止程序
   MOV,  // MOV reg1, reg2;     ::将寄存器 reg2 中的值放入 reg1
   ADD,  // ADD;                ::取出栈中的两个数据相加后，结果放入栈中
