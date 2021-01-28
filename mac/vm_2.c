@@ -109,7 +109,6 @@ void eval(int instr)
   case PSH:
   {
     stack[++sp] = program[++ip];
-    printStack();
     break;
   }
 
@@ -130,7 +129,6 @@ void eval(int instr)
     stack[++sp] = result;
 
     registers[A] = result;
-    printStack();
 
     break;
   }
@@ -147,8 +145,6 @@ void eval(int instr)
     stack[++sp] = result;
     registers[A] = result;
 
-    printStack();
-
     break;
   }
 
@@ -163,8 +159,6 @@ void eval(int instr)
     // 入栈
     stack[++sp] = result;
     registers[A] = result;
-
-    printStack();
 
     break;
   }
@@ -182,8 +176,6 @@ void eval(int instr)
       // 入栈
       stack[++sp] = result;
       registers[A] = result;
-
-      printStack();
     }
     else
     {
