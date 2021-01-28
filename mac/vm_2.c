@@ -13,7 +13,8 @@ typedef enum
   SUB,
   DIV,
   MUL,
-  NOP,
+  STR,
+  LDR,
   IF,
   LOG
 } InstructionSet;
@@ -26,9 +27,9 @@ typedef enum
   C,
   D,
   E,
-  F,
-  IP,
-  SP,
+  F,  // 通用寄存器
+  IP, // IP 寄存器
+  SP, // 栈顶指针寄存器
   NUM_OF_REGISTERS
 } Registers;
 
@@ -55,6 +56,8 @@ const int program[] = {
     SET, C, 2,
     LOG, 4,
     MOV, B, A,
+    STR, B,
+    LDR, C,
     HLT};
 
 #define sp (registers[SP])
@@ -198,6 +201,22 @@ void eval(int instr)
     int sourceValue = registers[sr];
     registers[dr] = sourceValue;
 
+    break;
+  }
+
+  case STR:
+  {
+    // 将指定寄存器中的参数，放入栈中
+    int r = program[++ip];
+    stack[++sp] = registers[r];
+    break;
+  }
+
+  case LDR:
+  {
+    int value = stack[sp];
+    int r = program[++ip];
+    registers[r] = value;
     break;
   }
 
