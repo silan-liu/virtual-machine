@@ -6,6 +6,9 @@ uint16_t mem[UINT16_MAX] = {
     // add r0,r1,r2
     0x1042,
 
+    // add r0,r1,imm
+    0b0001000001111111,
+
     // invalid opcode
     0b1111000011110000,
 
@@ -45,20 +48,20 @@ uint16_t reg[R_COUNT];
 // 指令定义
 typedef enum
 {
-  OP_BR = 0,  // 条件分支
-  OP_ADD = 1, // 加法
-  OP_LD = 2,  // load
-  OP_ST,      // store
-  OP_JSR,     // jump resgister
-  OP_AND,     // 与运算
-  OP_LDR,     // load register
-  OP_STR,     // store register
-  OP_NOT,     // 取反
-  OP_LDI,     // load indirect
-  OP_STI,     // store indirect
-  OP_JMP,     // jump
-  OP_LEA,     // load effective address
-  OP_TRAP     // trap，陷阱，相当于中断
+  OP_BR = 0,    // 条件分支
+  OP_ADD = 1,   // 加法
+  OP_LD = 2,    // load
+  OP_ST = 3,    // store
+  OP_JSR = 4,   // jump resgister
+  OP_AND = 5,   // 与运算
+  OP_LDR = 6,   // load register
+  OP_STR = 7,   // store register
+  OP_NOT = 8,   // 取反
+  OP_LDI = 9,   // load indirect
+  OP_STI = 10,  // store indirect
+  OP_JMP = 11,  // jump
+  OP_LEA = 12,  // load effective address
+  OP_TRAP = 13, // trap，陷阱，相当于中断
 } InstructionSet;
 
 // 标志定义
@@ -114,9 +117,9 @@ int read_image(const char *image_path)
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
   // 最高位 1
-  if ((x >> (bit_count)) & 0x1)
+  if ((x >> (bit_count - 1)) & 0x1)
   {
-    x |= 0xFF << bit_count;
+    x |= 0xFFFF << bit_count;
   }
 
   return x;
@@ -141,13 +144,16 @@ void update_flags(uint16_t r)
   }
 }
 
+// 加法指令，两种模式
+// add r0, r1, imm， 立即数模式
+// add r0, r1, r2，寄存器模式
 void add(int instr)
 {
-  // 取出目的寄存器 dr，9~11，占 3 位，与上 111
-  uint16_t dr = (instr >> 9) & 0x7;
+  // 取出目的寄存器 r0，9~11，占 3 位，与上 111
+  uint16_t r0 = (instr >> 9) & 0x7;
 
-  // 源寄存器 sr1，6~8 位，
-  uint16_t sr1 = (instr >> 6) & 0x7;
+  // 源寄存器 r1，6~8 位，
+  uint16_t r1 = (instr >> 6) & 0x7;
 
   // add 模式
   uint16_t flag = (instr >> 5) & 0x1;
@@ -155,15 +161,17 @@ void add(int instr)
   // 立即数模式
   if (flag)
   {
-    puts("add imm mode");
-
     // 低五位，取出立即数。
     uint16_t data = instr & 0x1F;
+
+    printf("add imm mode, imm:%d\n", data);
 
     // 符号扩展，若高位是 1，则全部补 1
     uint16_t value = sign_extend(data, 5);
 
-    reg[dr] = reg[sr1] + value;
+    printf("add imm mode, sign_extend imm:%d\n", value);
+
+    reg[r0] = reg[r1] + value;
   }
   else
   {
@@ -171,40 +179,101 @@ void add(int instr)
 
     // 寄存器模式
     // 取出源寄存器 2，低 3 位
-    uint16_t sr2 = instr & 0x7;
-    reg[dr] = reg[sr1] + reg[sr2];
+    uint16_t r2 = instr & 0x7;
+
+    reg[r0] = reg[r1] + reg[r2];
   }
 
+  printf("reg_%d value:%d\n", r0, reg[r0]);
+
   // 更新标志寄存器
-  update_flags(dr);
+  update_flags(r0);
 }
 
-// load，从内存中获取数据，放入寄存器
-// ld r, pc_offset
-// [pc+pc_offset] 的值为待取数据
-void ld(uint16_t instr)
+// 与运算，同 add ，两种模式
+void and (uint16_t instr)
 {
+  // 取出目的寄存器 r0，9~11，占 3 位，与上 111
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  // 源寄存器 r1，6~8 位，
+  uint16_t r1 = (instr >> 6) & 0x7;
+
+  // add 模式
+  uint16_t flag = (instr >> 5) & 0x1;
+
+  // 立即数模式
+  if (flag)
+  {
+    // 低五位，取出立即数。
+    uint16_t data = instr & 0x1F;
+
+    printf("add imm mode, imm:%d\n", data);
+
+    // 符号扩展，若高位是 1，则全部补 1
+    uint16_t value = sign_extend(data, 5);
+
+    printf("add imm mode, sign_extend imm:%d\n", value);
+
+    reg[r0] = reg[r1] & value;
+  }
+  else
+  {
+    puts("add reg mode");
+
+    // 寄存器模式
+    // 取出源寄存器 2，低 3 位
+    uint16_t r2 = instr & 0x7;
+
+    reg[r0] = reg[r1] & reg[r2];
+  }
+
+  printf("reg_%d value:%d\n", r0, reg[r0]);
+
+  // 更新标志寄存器
+  update_flags(r0);
+}
+
+// NOT r0, r1。将 r1 取反后，放入 r0
+void not(uint16_t instr)
+{
+  // 取出目的寄存器 r0，9~11，占 3 位，与上 111
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  // 源寄存器 r1，6~8 位，
+  uint16_t r1 = (instr >> 6) & 0x7;
+
+  reg[r0] = ~reg[r1];
+  update_flags(r0);
+}
+
+// 标志条件跳转
+// br cond_flag, pc_offset
+void branch(uint16_t instr)
+{
+  uint16_t cond_flag = (instr >> 9) & 0x7;
   uint16_t pc_offset = instr & 0x1ff;
 
-  // 符号扩展
-  pc_offset = sign_extend(pc_offset, 9);
-
-  uint16_t address = PC + pc_offset;
-  uint16_t data = mem_read(address);
-
-  uint16_t r = (instr >> 9) & 0x7;
-
-  // 更新寄存器
-  reg[r] = data;
-
-  // 更新标志寄存器
-  update_flags(r);
+  // 传入标识包含标志寄存器的某位
+  if (cond_flag & COND)
+  {
+    PC += pc_offset;
+  }
 }
 
-// load indirect，从内存中获取数据，放入寄存器
+// jump r
+// 跳转到寄存器中的值
+void jump(uint16_t instr)
+{
+  uint16_t r1 = (instr >> 6) & 0x7;
+  PC = reg[r1];
+}
+
+// load indirect，从内存中获取数据，放入寄存器。间接模式
+// 以 pc 寄存器作为偏移基准
 // ldi dr, pc_offset
 // [[pc+pc_offset]]，pc+pc_offset 中的内容是数据的地址。
-void ldi(uint16_t instr)
+void load_indirect(uint16_t instr)
 {
   uint16_t pc_offset = instr & 0x1ff;
 
@@ -226,9 +295,10 @@ void ldi(uint16_t instr)
   update_flags(r);
 }
 
-// 将地址放入寄存器
+// 将地址放入寄存器 r
+// 以 pc 寄存器作为偏移基准
 // lea r, pc_offset
-void lea(uint16_t instr)
+void load_effective_address(uint16_t instr)
 {
   uint16_t pc_offset = instr & 0x1ff;
 
@@ -244,6 +314,99 @@ void lea(uint16_t instr)
 
   // 更新标志寄存器
   update_flags(r);
+}
+
+// jump resgister
+// 偏移量跳转；立即数模式和寄存器模式
+void jump_register(uint16_t instr)
+{
+  uint16_t long_flag = (instr >> 11) & 0x1;
+  if (long_flag)
+  {
+    // long_pc_offset
+    uint16_t long_pc_offset = sign_extend(instr & 0x7ff, 11);
+    PC += long_pc_offset;
+  }
+  else
+  {
+    uint16_t r1 = (instr >> 6) & 0x7;
+    PC += reg[r1];
+  }
+}
+
+// ld r, pc_offset
+// 以 pc 寄存器作为偏移基准
+// 将距离下一条指令 pc_offset 处里的数据取出来，放入 r 中。
+void load(uint16_t instr)
+{
+  uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+  uint16_t r0 = (instr >> 9) & 0x7;
+  reg[r0] = mem_read(PC + pc_offset);
+  update_flags(r0);
+}
+
+// ldr r0, r1, offset
+// 以 r1 作为偏移基准
+// 将距离 r1，offset 处的数据取出来，放入 r0。
+void load_register(uint16_t instr)
+{
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  uint16_t r1 = (instr >> 6) & 0x7;
+
+  uint16_t offset = sign_extend(instr & 0x3f, 6);
+
+  uint16_t address = reg[r1] + offset;
+  uint16_t value = mem_read(address);
+
+  reg[r0] = value;
+  update_flags(r0);
+}
+
+// st r, pc_offset
+// 以 pc 寄存器作为偏移基准
+// 将 r 中的数据放入距离下一条指令，pc_offset 的地址中。
+void store(uint16_t instr)
+{
+  uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  uint16_t address = PC + pc_offset;
+  uint16_t value = reg[r0];
+
+  mem_write(address, value);
+}
+
+// sti r, pc_offset，间接存储，pc+pc_offset 是待存储数据地址的地址。
+void store_indirect(uint16_t instr)
+{
+  uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  uint16_t indirect_address = PC + pc_offset;
+  uint16_t address = mem_read(indirect_address);
+
+  uint16_t value = reg[r0];
+
+  mem_write(address, value);
+}
+
+// str r0, r1, offsets
+// 以 r1 作为偏移基准
+void store_register(uint16_t instr)
+{
+  // r0
+  uint16_t r0 = (instr >> 9) & 0x7;
+
+  // r1
+  uint16_t r1 = (instr >> 6) & 0x7;
+
+  uint16_t offset = sign_extend(instr & 0x3f, 6);
+
+  uint16_t address = reg[r1] + offset;
+  uint16_t value = reg[r0];
+
+  mem_write(address, value);
 }
 
 // 中断，op = 1111
@@ -332,62 +495,73 @@ int main(int argc, const char *argv[])
 
     case OP_AND:
     {
+      and(instr);
       break;
     }
 
     case OP_NOT:
     {
+      not(instr);
       break;
     }
 
     case OP_BR:
     {
+      branch(instr);
       break;
     }
 
     case OP_JMP:
     {
+      jump(instr);
       break;
     }
 
     case OP_JSR:
     {
+      jump_register(instr);
       break;
     }
 
     case OP_LD:
     {
+      load(instr);
       break;
     }
 
     case OP_LDI:
     {
-      ldi(instr);
+      load_indirect(instr);
       break;
     }
 
     case OP_LDR:
     {
+      load_register(instr);
       break;
     }
 
     case OP_LEA:
     {
+      load_effective_address(instr);
       break;
     }
 
     case OP_ST:
     {
+      store(instr);
       break;
     }
 
     case OP_STI:
     {
+      store_indirect(instr);
       break;
     }
 
     case OP_STR:
     {
+      store_register(instr);
       break;
     }
 
