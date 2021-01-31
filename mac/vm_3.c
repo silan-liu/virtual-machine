@@ -356,7 +356,7 @@ void load_effective_address(uint16_t instr)
 
 // jump resgister
 // 偏移量跳转
-void jump_register(uint16_t instr)
+void jump_subroutine(uint16_t instr)
 {
   uint16_t long_flag = (instr >> 11) & 0x1;
 
@@ -627,7 +627,7 @@ int main(int argc, const char *argv[])
 
     case OP_JSR:
     {
-      jump_register(instr);
+      jump_subroutine(instr);
       break;
     }
 
