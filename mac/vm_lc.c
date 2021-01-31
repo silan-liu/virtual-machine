@@ -290,7 +290,7 @@ void not(uint16_t instr)
 void branch(uint16_t instr)
 {
   uint16_t cond_flag = (instr >> 9) & 0x7;
-  uint16_t pc_offset = instr & 0x1ff;
+  uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
 
   // 传入标识与标志寄存器的值相符，N,P,Z
   if (cond_flag & COND)
