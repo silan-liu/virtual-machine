@@ -11,8 +11,10 @@
 
 > 「听说你想写个虚拟机（x）」系列正在准备筹划中，后续还会有几篇文章，敬请期待。
 
+![](https://cdn.jsdelivr.net/gh/silan-liu/picRepo/img20210131195623.png)
 
-公众号：「微微笑的蜗牛」，欢迎关注~
+
+文章会发布到公众号：「微微笑的蜗牛」，欢迎关注~
 
 
 ![](https://cdn.jsdelivr.net/gh/silan-liu/picRepo/img20210131124048.jpg)
