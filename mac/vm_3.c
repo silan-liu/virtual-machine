@@ -13,7 +13,7 @@ uint16_t mem[UINT16_MAX] = {
     0b1111000011110000,
 
     // trap-halt
-    0xd025,
+    0xf025,
 };
 
 // 程序运行状态
@@ -56,12 +56,14 @@ typedef enum
   OP_AND = 5,   // 与运算
   OP_LDR = 6,   // load register
   OP_STR = 7,   // store register
-  OP_NOT = 8,   // 取反
-  OP_LDI = 9,   // load indirect
-  OP_STI = 10,  // store indirect
-  OP_JMP = 11,  // jump
-  OP_LEA = 12,  // load effective address
-  OP_TRAP = 13, // trap，陷阱，相当于中断
+  OP_RTI = 8,   // unused
+  OP_NOT = 9,   // 取反
+  OP_LDI = 10,  // load indirect
+  OP_STI = 11,  // store indirect
+  OP_JMP = 12,  // jump
+  OP_RES = 13,  // reserved
+  OP_LEA = 14,  // load effective address
+  OP_TRAP = 15, // trap，陷阱，相当于中断
 } InstructionSet;
 
 // 标志定义
@@ -107,10 +109,46 @@ void mem_write(uint16_t address, uint16_t data)
   mem[address] = data;
 }
 
+uint16_t swap16(uint16_t x)
+{
+  // 两个字节交换
+  return (x << 8) | (x >> 8);
+}
+
+// 文件存储是大端字节序，需转换为小端
+void read_image_file(FILE *file)
+{
+  uint16_t origin;
+  fread(&origin, sizeof(origin), 1, file);
+  origin = swap16(origin);
+
+  uint16_t max_read = UINT16_MAX - origin;
+  uint16_t *p = mem + origin;
+
+  // 读取文件内容到 p 指向的地址，以 2 字节为单位
+  size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+  // 大端转小端
+  while (read-- > 0)
+  {
+    *p = swap16(*p);
+    ++p;
+  }
+}
+
 // 读取指令文件
 int read_image(const char *image_path)
 {
-  return 0;
+  FILE *file = fopen(image_path, "rb");
+  if (!file)
+  {
+    return 0;
+  }
+
+  read_image_file(file);
+
+  fclose(file);
+  return 1;
 }
 
 // 符号扩展
@@ -131,7 +169,7 @@ void update_flags(uint16_t r)
   uint16_t value = reg[r];
   if (value == 0)
   {
-    COND = 0;
+    COND = FL_ZRO;
   }
   else if ((value >> 15) & 0x1)
   {
@@ -254,7 +292,7 @@ void branch(uint16_t instr)
   uint16_t cond_flag = (instr >> 9) & 0x7;
   uint16_t pc_offset = instr & 0x1ff;
 
-  // 传入标识包含标志寄存器的某位
+  // 传入标识与标志寄存器的值相符，N,P,Z
   if (cond_flag & COND)
   {
     PC += pc_offset;
@@ -317,10 +355,14 @@ void load_effective_address(uint16_t instr)
 }
 
 // jump resgister
-// 偏移量跳转；立即数模式和寄存器模式
+// 偏移量跳转
 void jump_register(uint16_t instr)
 {
   uint16_t long_flag = (instr >> 11) & 0x1;
+
+  // R7 保存 pc 值
+  reg[R_R7] = PC;
+
   if (long_flag)
   {
     // long_pc_offset
@@ -330,7 +372,7 @@ void jump_register(uint16_t instr)
   else
   {
     uint16_t r1 = (instr >> 6) & 0x7;
-    PC += reg[r1];
+    PC = reg[r1];
   }
 }
 
@@ -409,6 +451,68 @@ void store_register(uint16_t instr)
   mem_write(address, value);
 }
 
+// 将 r0 寄存器中地址处的字符串打印出来。
+void trap_puts()
+{
+  printf("trap_puts");
+
+  uint16_t address = reg[R_R0];
+  uint16_t *c = mem + address;
+
+  while (*c)
+  {
+    putc((char)*c, stdout);
+    ++c;
+  }
+
+  fflush(stdout);
+}
+
+// 等待输入一个字符，最后存入 r0
+void trap_getc()
+{
+  reg[R_R0] = (uint16_t)getchar();
+}
+
+// 将 r0 中的字符打印出来
+void trap_out()
+{
+  putc((char)reg[R_R0], stdout);
+  fflush(stdout);
+}
+
+// 提示输入一个字符，将字符打印，并放入 R0
+void trap_in()
+{
+  printf("Enter a character:");
+  char c = getchar();
+  putc(c, stdout);
+  reg[R_R0] = (uint16_t)c;
+}
+
+// 将 r0 地址处的字符串出来，一个字符一字节
+void trap_put_string()
+{
+  uint16_t *c = mem + reg[R_R0];
+  while (*c)
+  {
+    // 低  8 位
+    char char1 = (*c) & 0xff;
+    putc(char1, stdout);
+
+    // 高 8 位
+    char char2 = (*c) >> 8;
+    if (char2)
+    {
+      putc(char2, stdout);
+    }
+
+    ++c;
+  }
+
+  fflush(stdout);
+}
+
 // 中断，op = 1111
 void trap(int instr)
 {
@@ -418,26 +522,31 @@ void trap(int instr)
   {
   case TRAP_GETC:
   {
+    trap_getc();
     break;
   }
 
   case TRAP_OUT:
   {
+    trap_out();
     break;
   }
 
   case TRAP_PUTS:
   {
+    trap_puts();
     break;
   }
 
   case TARP_IN:
   {
+    trap_in();
     break;
   }
 
   case TRAP_PUTSP:
   {
+    trap_put_string();
     break;
   }
 
@@ -458,23 +567,23 @@ void trap(int instr)
 
 int main(int argc, const char *argv[])
 {
-  // if (argc < 2)
-  // {
-  //   printf("lc3 [image-file] ...\n");
-  //   exit(2);
-  // }
+  if (argc < 2)
+  {
+    printf("no lc3 image file ...\n");
+    exit(2);
+  }
 
-  // for (int i = 0; i < argc; i++)
-  // {
-  //   if (!read_image(argv[i]))
-  //   {
-  //     printf("failed to load image %s\n", argv[i]);
-  //     exit(1);
-  //   }
-  // }
+  for (int i = 0; i < argc; i++)
+  {
+    if (!read_image(argv[i]))
+    {
+      printf("failed to load image %s\n", argv[i]);
+      exit(1);
+    }
+  }
 
   // 设置初始值
-  PC = 0;
+  PC = 0x3000;
 
   while (running)
   {
@@ -483,7 +592,6 @@ int main(int argc, const char *argv[])
 
     // 指令操作码占 4 位
     u_int16_t op = instr >> 12;
-    printf("op:%d\n", op);
 
     switch (op)
     {
