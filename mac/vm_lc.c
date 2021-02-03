@@ -88,7 +88,7 @@ typedef enum
 // 从内存读取数据
 uint16_t mem_read(int address)
 {
-  if (address < 0 || address > UINT16_MAX)
+  if (address < 0 || address >= UINT16_MAX)
   {
     printf("memory read error!\n");
     exit(4);
@@ -100,7 +100,7 @@ uint16_t mem_read(int address)
 // 将 data 写入内存地址为 address 处
 void mem_write(uint16_t address, uint16_t data)
 {
-  if (address < 0 || address > UINT16_MAX)
+  if (address < 0 || address >= UINT16_MAX)
   {
     printf("memory write error!\n");
     exit(3);
