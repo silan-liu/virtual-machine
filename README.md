@@ -14,7 +14,7 @@
 ![](https://cdn.jsdelivr.net/gh/silan-liu/picRepo/img20210131195623.png)
 
 
-文章会同步发布到[简书](https://www.jianshu.com/u/9d9cf9760217)和公众号「微微笑的蜗牛」和，欢迎关注~
+文章会同步发布到[简书](https://www.jianshu.com/u/9d9cf9760217)和公众号「微微笑的蜗牛」，欢迎关注~
 
 
 ![](https://cdn.jsdelivr.net/gh/silan-liu/picRepo/img20210131124048.jpg)
