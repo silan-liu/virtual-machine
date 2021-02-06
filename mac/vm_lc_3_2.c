@@ -3,29 +3,41 @@
 
 // 内存区
 uint16_t mem[UINT16_MAX] = {
-    // ADD R0,R1,R2
-    0x1042,
+    // ld r0,9
+    0x2009,
 
-    // ADD R1,R2,#6
-    0x12A6,
+    // add r0, r0, 1
+    0x1021,
 
-    // JSR 2;下一条是第 4 条指令，跳转到第 4+2=6 条指令
-    0x4802,
+    // st r0,7
+    0x3007,
 
-    // JMP R1;跳转到第 6 条指令
-    0xC040,
+    // ldi, r1, 8
+    0xa208,
+
+    // add r1, r1, 2
+    0x1262,
+
+    // sti r1, 6
+    0xb206,
+
+    // lea r2, 4
+    0xe404,
 
     // RTI
-    0X8000,
-
-    //RES
-    0XD000,
-
-    // NOT R3, R1
-    0x967F,
+    0x8000,
+    0x8000,
 
     // trap-halt
     0xf000,
+
+    // 数据
+    0x1,
+    0x2,
+    0xf,
+    0x0,
+    0x0,
+    0x3,
 };
 
 // 程序运行状态
@@ -161,19 +173,15 @@ void add(int instr)
     // 低五位，取出立即数。
     uint16_t data = instr & 0x1F;
 
-    printf("add imm mode, imm:%d\n", data);
-
     // 符号扩展，若高位是 1，则全部补 1
     uint16_t value = sign_extend(data, 5);
 
-    printf("add imm mode, sign_extend imm:%d\n", value);
-
     reg[r0] = reg[r1] + value;
+
+    printf("add imm dr:%d, sr:%d, value:%d", r0, r1, value);
   }
   else
   {
-    puts("add reg mode");
-
     // 寄存器模式
     // 取出源寄存器 2，低 3 位
     uint16_t r2 = instr & 0x7;
@@ -287,6 +295,8 @@ void load_indirect(uint16_t instr)
 
   // 更新寄存器
   reg[r] = data;
+
+  printf("ldi r:%d, address:%d, data:%d\n", r, address, data);
 
   // 更新标志寄存器
   update_flags(r);
@@ -421,6 +431,11 @@ int main(int argc, const char *argv[])
   // 设置初始值
   PC = 0;
 
+  printf("mem 10,%d\n", mem_read(10));
+  printf("mem 11,%d\n", mem_read(11));
+  printf("mem 12,%d\n", mem_read(12));
+  printf("mem 15,%d\n", mem_read(15));
+
   // 用于打印当前执行操作码
   const char *op_list[] = {"BR", "ADD", "LD", "ST", "JSR", "AND", "LDR", "STR", "RTI", "NOT", "LDI", "STI", "JMP", "RES", "LEA", "TRAP"};
 
@@ -520,6 +535,10 @@ int main(int argc, const char *argv[])
       break;
     }
 
+    case OP_RTI:
+    case OP_RES:
+      break;
+
     default:
     {
       printf("Unknown OpCode!\n");
@@ -527,6 +546,14 @@ int main(int argc, const char *argv[])
     break;
     }
   }
+
+  printf("r0,%d\n", reg[R_R0]);
+  printf("r1,%d\n", reg[R_R1]);
+  printf("r2,%d\n", reg[R_R2]);
+
+  printf("mem 10,%d\n", mem_read(10));
+  printf("mem 11,%d\n", mem_read(11));
+  printf("mem 15,%d\n", mem_read(15));
 
   return 0;
 }
