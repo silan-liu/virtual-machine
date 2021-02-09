@@ -2,7 +2,42 @@
 #include <stdlib.h>
 
 // 内存区
-uint16_t mem[UINT16_MAX];
+uint16_t mem[UINT16_MAX] = {
+    // GETC
+    0xf020,
+    // OUT
+    0xf021,
+
+    //IN
+    0xf023,
+
+    // AND RO,RO,0
+    0X5020,
+
+    // ADD R0,R0,10
+    0X102A,
+
+    // PUTS
+    0XF022,
+
+    // AND RO,RO,0
+    0X5020,
+
+    // ADD R0,R0,14
+    0X102e,
+
+    //PUTSP
+    0XF024,
+    0xf025,
+
+    //data
+    0x61,
+    0x62,
+    0x63,
+    0x0,
+    0x6564,
+    0x6766,
+    0x68};
 
 // 程序运行状态
 int running = 1;
@@ -97,48 +132,6 @@ void mem_write(uint16_t address, uint16_t data)
   mem[address] = data;
 }
 
-uint16_t swap16(uint16_t x)
-{
-  // 两个字节交换
-  return (x << 8) | (x >> 8);
-}
-
-// 文件存储是大端字节序，需转换为小端
-void read_image_file(FILE *file)
-{
-  uint16_t origin;
-  fread(&origin, sizeof(origin), 1, file);
-  origin = swap16(origin);
-
-  uint16_t max_read = UINT16_MAX - origin;
-  uint16_t *p = mem + origin;
-
-  // 读取文件内容到 p 指向的地址，以 2 字节为单位
-  size_t read = fread(p, sizeof(uint16_t), max_read, file);
-
-  // 大端转小端
-  while (read-- > 0)
-  {
-    *p = swap16(*p);
-    ++p;
-  }
-}
-
-// 读取指令文件
-int read_image(const char *image_path)
-{
-  FILE *file = fopen(image_path, "rb");
-  if (!file)
-  {
-    return 0;
-  }
-
-  read_image_file(file);
-
-  fclose(file);
-  return 1;
-}
-
 // 符号扩展
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
@@ -190,19 +183,15 @@ void add(int instr)
     // 低五位，取出立即数。
     uint16_t data = instr & 0x1F;
 
-    printf("add imm mode, imm:%d\n", data);
-
     // 符号扩展，若高位是 1，则全部补 1
     uint16_t value = sign_extend(data, 5);
 
-    printf("add imm mode, sign_extend imm:%d\n", value);
-
     reg[r0] = reg[r1] + value;
+
+    printf("add imm dr:%d, sr:%d, value:%d\n", r0, r1, value);
   }
   else
   {
-    puts("add reg mode");
-
     // 寄存器模式
     // 取出源寄存器 2，低 3 位
     uint16_t r2 = instr & 0x7;
@@ -316,6 +305,8 @@ void load_indirect(uint16_t instr)
 
   // 更新寄存器
   reg[r] = data;
+
+  printf("ldi r:%d, address:%d, data:%d\n", r, address, data);
 
   // 更新标志寄存器
   update_flags(r);
@@ -442,9 +433,10 @@ void store_register(uint16_t instr)
 // 将 r0 寄存器中地址处的字符串打印出来。1 个字符占 2 字节。
 void trap_puts()
 {
-  printf("trap_puts");
-
   uint16_t address = reg[R_R0];
+
+  printf("trap_puts begin address:%d\n", address);
+
   uint16_t *c = mem + address;
 
   while (*c)
@@ -454,33 +446,53 @@ void trap_puts()
   }
 
   fflush(stdout);
+  puts("\ntrap_puts end ...");
 }
 
 // 等待输入一个字符，最后存入 r0
 void trap_getc()
 {
+  puts("trap_getc begin ...");
+
+  // 清空输入缓冲区
+  fflush(stdin);
   reg[R_R0] = (uint16_t)getchar();
+
+  puts("trap_getc end ...");
 }
 
 // 将 r0 中的字符打印出来
 void trap_out()
 {
+  puts("trap_out begin ...");
+
   putc((char)reg[R_R0], stdout);
   fflush(stdout);
+
+  puts("\ntrap_out end ...");
 }
 
 // 提示输入一个字符，将字符打印，并放入 R0
 void trap_in()
 {
+  puts("trap_in begin ...");
+
+  // 清空输入缓冲区
+  fflush(stdin);
+
   printf("Enter a character:");
   char c = getchar();
   putc(c, stdout);
   reg[R_R0] = (uint16_t)c;
+
+  puts("\ntrap_in end ...");
 }
 
 // 将 r0 地址处的字符串出来，一个字符一字节
 void trap_put_string()
 {
+  puts("trap_put_string begin ...");
+
   uint16_t *c = mem + reg[R_R0];
   while (*c)
   {
@@ -499,14 +511,14 @@ void trap_put_string()
   }
 
   fflush(stdout);
+  puts("\ntrap_put_string end ...");
 }
 
-// 中断，op = 1111
+// op = 1111
 void trap(int instr)
 {
   // trap_code，低 8 位
   uint16_t trap_code = instr & 0xff;
-  printf("trap_code:%d\n", trap_code);
 
   switch (trap_code)
   {
@@ -557,23 +569,11 @@ void trap(int instr)
 
 int main(int argc, const char *argv[])
 {
-  if (argc < 2)
-  {
-    printf("no lc3 image file ...\n");
-    exit(2);
-  }
-
-  for (int i = 0; i < argc; i++)
-  {
-    if (!read_image(argv[i]))
-    {
-      printf("failed to load image %s\n", argv[i]);
-      exit(1);
-    }
-  }
-
   // 设置初始值
-  PC = 0x3000;
+  PC = 0;
+
+  // 用于打印当前执行操作码
+  const char *op_list[] = {"BR", "ADD", "LD", "ST", "JSR", "AND", "LDR", "STR", "RTI", "NOT", "LDI", "STI", "JMP", "RES", "LEA", "TRAP"};
 
   while (running)
   {
@@ -582,6 +582,8 @@ int main(int argc, const char *argv[])
 
     // 指令操作码占 4 位
     u_int16_t op = instr >> 12;
+
+    printf("\n======= exe op:%s =======\n\n", op_list[op]);
 
     switch (op)
     {
@@ -669,6 +671,10 @@ int main(int argc, const char *argv[])
       break;
     }
 
+    case OP_RTI:
+    case OP_RES:
+      break;
+
     default:
     {
       printf("Unknown OpCode!\n");
@@ -676,6 +682,5 @@ int main(int argc, const char *argv[])
     break;
     }
   }
-
   return 0;
 }

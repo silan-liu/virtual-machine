@@ -19,5 +19,13 @@ int main()
 
   fclose(file);
 
+  uint16_t t = 65;
+  char *p1 = (char *)&t;
+  printf("%0d,%0d\n", p1[0], p1[1]);
+
+  char c1 = getchar();
+  printf("address:%0x, %0x\n", c1, &c1);
+
+  printf("%d\n", sizeof("123"));
   return 0;
 }
