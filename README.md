@@ -10,6 +10,7 @@
 
 * [听说你想写个虚拟机（三）？](https://mp.weixin.qq.com/s?__biz=Mzg4MjU2Mzc1MQ==&mid=2247484485&idx=1&sn=98db26d76fd6bf8a4570ce2db91da420&chksm=cf558b8df822029bf41c8acf943e4844411e349487f4b2f64d00dc1cf1acd3c563d9163ca42f&token=2075620006&lang=zh_CN#rd)
 
+* [听说你想写个虚拟机（四）？](https://mp.weixin.qq.com/s?__biz=Mzg4MjU2Mzc1MQ==&mid=2247484737&idx=1&sn=1cd1c09748f613e7dfc67b6ff7fec18f&chksm=cf558a89f822039f1dd0dddaed2525de1d3f3a365eeecbec29551578c4bab8b2c2e7a78ef3aa&token=2075620006&lang=zh_CN#rd)
 
 
 另外，「听说你想写个虚拟机（x）」系列正在准备筹划中，后续还会有几篇文章，敬请期待。
