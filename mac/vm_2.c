@@ -233,7 +233,7 @@ void eval(int instr)
     }
     else
     {
-      ip += 3;
+      ip += 1;
     }
     break;
   }
